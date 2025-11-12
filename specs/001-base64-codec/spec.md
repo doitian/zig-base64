@@ -5,6 +5,16 @@
 **Status**: Draft  
 **Input**: User description: "Implement base64 encoder and decoder"
 
+## Clarifications
+
+### Session 2025-11-12
+
+- Q: How should the decoder handle whitespace characters (spaces, tabs, newlines) in Base64 strings? → A: Silently ignore all whitespace during decoding
+- Q: Should the encoder/decoder support streaming or chunked processing for large files (multi-GB)? → A: Support streaming/chunked encoding for arbitrarily large files
+- Q: How should the CLI accept input and produce output? → A: Support both stdin/stdout and file paths
+- Q: How should the decoder handle truncated or partial Base64 strings? → A: Return error indicating incomplete/truncated input
+- Q: What format should CLI error messages use? → A: Human-readable error messages to stderr
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Encode Binary Data to Base64 (Priority: P1)
@@ -21,6 +31,8 @@ Users need to convert binary data (such as file contents, byte arrays, or arbitr
 2. **Given** an empty byte array, **When** encoding is requested, **Then** the output is an empty string
 3. **Given** a byte array with arbitrary binary data (including null bytes and non-printable characters), **When** encoding is requested, **Then** the output is a valid Base64 string that can be decoded back to the original data
 4. **Given** a large binary input (1MB+), **When** encoding is requested, **Then** the encoding completes successfully and produces valid Base64 output
+5. **Given** binary data provided via stdin, **When** the CLI encoder is invoked, **Then** the Base64 output is written to stdout
+6. **Given** a file path argument, **When** the CLI encoder is invoked, **Then** the file contents are encoded and output is written to the specified destination file
 
 ---
 
@@ -39,6 +51,7 @@ Users need to convert Base64-encoded text strings back into their original binar
 3. **Given** a Base64 string with padding characters, **When** decoding is requested, **Then** the padding is correctly handled and original data is recovered
 4. **Given** a Base64 string without padding (where padding was optional), **When** decoding is requested, **Then** the decoder correctly infers the padding and recovers the original data
 5. **Given** a large Base64 string (1MB+ encoded), **When** decoding is requested, **Then** the decoding completes successfully and produces the original binary data
+6. **Given** a Base64 string containing whitespace characters (spaces, tabs, newlines), **When** decoding is requested, **Then** the whitespace is silently ignored and the original binary data is correctly recovered
 
 ---
 
@@ -55,6 +68,7 @@ Users may provide invalid Base64 strings for decoding. The system should detect 
 1. **Given** a string containing invalid Base64 characters (e.g., "@#$%"), **When** decoding is attempted, **Then** the system returns a clear error indicating invalid characters
 2. **Given** a Base64 string with incorrect length (not multiple of 4 when padding is required), **When** decoding is attempted, **Then** the system returns a clear error indicating invalid format
 3. **Given** a Base64 string with invalid padding, **When** decoding is attempted, **Then** the system returns a clear error indicating padding issue
+4. **Given** a truncated or incomplete Base64 string, **When** decoding is attempted, **Then** the system returns a clear error indicating the input is incomplete
 
 ---
 
@@ -76,10 +90,7 @@ Users may need different Base64 encoding variants for specific use cases (standa
 
 ### Edge Cases
 
-- What happens when encoding extremely large data (multi-GB files)? Should the encoder support streaming or chunked encoding?
-- How does the system handle whitespace or line breaks within Base64 strings during decoding (some implementations allow these for formatting)?
 - What happens with null or undefined inputs?
-- How does the system handle partial data or truncated Base64 strings?
 - What is the behavior with different character encodings in the original data?
 
 ## Requirements *(mandatory)*
@@ -96,7 +107,12 @@ Users may need different Base64 encoding variants for specific use cases (standa
 - **FR-008**: System MUST support encoding and decoding of data containing null bytes and all possible byte values (0x00-0xFF)
 - **FR-009**: System MUST support URL-safe Base64 variant (using '-' and '_' instead of '+' and '/')
 - **FR-010**: System MUST support Base64 encoding with and without padding
-- **FR-011**: Decoder MUST handle Base64 strings with whitespace characters (spaces, tabs, newlines) by either ignoring them or clearly reporting an error
+- **FR-011**: Decoder MUST silently ignore whitespace characters (spaces, tabs, newlines) when processing Base64 input, allowing for formatted or line-wrapped Base64 strings
+- **FR-012**: System MUST support streaming/chunked processing mode for encoding and decoding arbitrarily large files without loading entire contents into memory
+- **FR-013**: CLI MUST support reading input from stdin and writing output to stdout for pipe-friendly operation
+- **FR-014**: CLI MUST support reading from and writing to files specified via command-line arguments as an alternative to stdin/stdout
+- **FR-015**: Decoder MUST return a clear error when encountering truncated or incomplete Base64 input that cannot be fully decoded
+- **FR-016**: CLI MUST write human-readable error messages to stderr with clear descriptions of validation failures or processing errors
 
 ### Key Entities
 
@@ -115,3 +131,4 @@ Users may need different Base64 encoding variants for specific use cases (standa
 - **SC-005**: Invalid Base64 input is detected with 100% accuracy across a test suite of at least 100 malformed inputs
 - **SC-006**: System handles binary inputs up to 100MB without memory exhaustion or crashes
 - **SC-007**: All Base64 output is valid according to RFC 4648 specification (verified by third-party Base64 validators)
+- **SC-008**: Streaming mode successfully processes files larger than available RAM (tested with multi-GB files) with constant memory usage
