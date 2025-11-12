@@ -150,8 +150,10 @@ pub fn decodeInto(out: []u8, input: []const u8, opts: DecodeOptions) !usize {
                 return DecodeError.InvalidPadding;
             }
             // Process final quad now
-            const a = rev[quad[0]]; if (a == 255) return DecodeError.InvalidCharacter;
-            const b = rev[quad[1]]; if (b == 255) return DecodeError.InvalidCharacter;
+            const a = rev[quad[0]];
+            if (a == 255) return DecodeError.InvalidCharacter;
+            const b = rev[quad[1]];
+            if (b == 255) return DecodeError.InvalidCharacter;
             const n_ab = (@as(u32, a) << 18) | (@as(u32, b) << 12);
             if (quad[2] == '=') {
                 // one byte
@@ -168,7 +170,8 @@ pub fn decodeInto(out: []u8, input: []const u8, opts: DecodeOptions) !usize {
                 }
                 return o;
             } else {
-                const c_val = rev[quad[2]]; if (c_val == 255) return DecodeError.InvalidCharacter;
+                const c_val = rev[quad[2]];
+                if (c_val == 255) return DecodeError.InvalidCharacter;
                 const n_abc = n_ab | (@as(u32, c_val) << 6);
                 if (quad[3] == '=') {
                     if (o + 1 >= out.len) return DecodeError.TruncatedInput;
@@ -253,7 +256,7 @@ pub fn encodeStream(reader: std.fs.File, writer: std.fs.File, opts: EncodeOption
         if (opts.padding) {
             _ = try writer.writeAll("==");
         } else {
-            const more = [_]u8{ alpha[(n24 >> 6) & 0x3F] };
+            const more = [_]u8{alpha[(n24 >> 6) & 0x3F]};
             _ = try writer.writeAll(more[0..]);
         }
     } else if (carry_len == 2) {
@@ -278,18 +281,24 @@ pub fn decodeStream(reader: std.fs.File, writer: std.fs.File, opts: DecodeOption
             if (opts.ignore_whitespace and isWhitespace(c)) continue;
             if (c == '=') {
                 if (qi == 2) {
-                    quad[2] = '='; quad[3] = '=';
-                    const a = rev[quad[0]]; if (a == 255) return DecodeError.InvalidCharacter;
-                    const b = rev[quad[1]]; if (b == 255) return DecodeError.InvalidCharacter;
+                    quad[2] = '=';
+                    quad[3] = '=';
+                    const a = rev[quad[0]];
+                    if (a == 255) return DecodeError.InvalidCharacter;
+                    const b = rev[quad[1]];
+                    if (b == 255) return DecodeError.InvalidCharacter;
                     const n_ab = (@as(u32, a) << 18) | (@as(u32, b) << 12);
-                    const outb = [_]u8{ @intCast((n_ab >> 16) & 0xFF) };
+                    const outb = [_]u8{@intCast((n_ab >> 16) & 0xFF)};
                     _ = try writer.writeAll(outb[0..]);
                     qi = 0;
                 } else if (qi == 3) {
                     quad[3] = '=';
-                    const a = rev[quad[0]]; if (a == 255) return DecodeError.InvalidCharacter;
-                    const b = rev[quad[1]]; if (b == 255) return DecodeError.InvalidCharacter;
-                    const c_val = rev[quad[2]]; if (c_val == 255) return DecodeError.InvalidCharacter;
+                    const a = rev[quad[0]];
+                    if (a == 255) return DecodeError.InvalidCharacter;
+                    const b = rev[quad[1]];
+                    if (b == 255) return DecodeError.InvalidCharacter;
+                    const c_val = rev[quad[2]];
+                    if (c_val == 255) return DecodeError.InvalidCharacter;
                     const n_abc = (@as(u32, a) << 18) | (@as(u32, b) << 12) | (@as(u32, c_val) << 6);
                     const outb = [_]u8{ @intCast((n_abc >> 16) & 0xFF), @intCast((n_abc >> 8) & 0xFF) };
                     _ = try writer.writeAll(outb[0..]);
@@ -318,19 +327,23 @@ pub fn decodeStream(reader: std.fs.File, writer: std.fs.File, opts: DecodeOption
 
     if (qi == 1) return DecodeError.TruncatedInput;
     if (qi == 2) {
-        const a = rev[quad[0]]; const b = rev[quad[1]];
+        const a = rev[quad[0]];
+        const b = rev[quad[1]];
         if (a == 255 or b == 255) return DecodeError.InvalidCharacter;
         const n_ab = (@as(u32, a) << 18) | (@as(u32, b) << 12);
-        const outb = [_]u8{ @intCast((n_ab >> 16) & 0xFF) };
+        const outb = [_]u8{@intCast((n_ab >> 16) & 0xFF)};
         _ = try writer.writeAll(outb[0..]);
     } else if (qi == 3) {
-        const a = rev[quad[0]]; const b = rev[quad[1]]; const c_val = rev[quad[2]];
+        const a = rev[quad[0]];
+        const b = rev[quad[1]];
+        const c_val = rev[quad[2]];
         if (a == 255 or b == 255 or c_val == 255) return DecodeError.InvalidCharacter;
         const n_abc = (@as(u32, a) << 18) | (@as(u32, b) << 12) | (@as(u32, c_val) << 6);
         const outb = [_]u8{ @intCast((n_abc >> 16) & 0xFF), @intCast((n_abc >> 8) & 0xFF) };
         _ = try writer.writeAll(outb[0..]);
     }
-}test "RFC 4648 vectors" {
+}
+test "RFC 4648 vectors" {
     const alloc = std.testing.allocator;
     const cases = [_][2][]const u8{
         .{ "", "" },
